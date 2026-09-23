@@ -1,0 +1,6 @@
+{
+  "name": "Beamtime Citation & RB Allocation Inspector",
+  "description": "Scan DOI publications, research papers, and PDF documents to detect facility beamtime proposal identifiers (RB#######) and formal allocation acknowledgements.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
