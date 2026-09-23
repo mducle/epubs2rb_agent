@@ -1,5 +1,5 @@
 """
-STFC ePubs & Beamtime RB Extractor Tools Package
+STFC ePubs, Beamtime RB Extractor, and Google ADK Gemini Agent Package
 """
 
 from .stfc_epubs_downloader import StfcEpubsDownloader, download_csv
@@ -19,6 +19,11 @@ from .rb_extractor_tool import (
     get_rb_agent_tools,
     get_gemini_rb_tool_declarations,
 )
+from .gemini_adk_agent import (
+    create_stfc_research_agent,
+    create_stfc_multi_agent_system,
+    StfcAgentRunner,
+)
 
 __all__ = [
     # STFC ePubs repository tools
@@ -37,4 +42,8 @@ __all__ = [
     "scan_text_for_rb",
     "get_rb_agent_tools",
     "get_gemini_rb_tool_declarations",
+    # Google ADK Gemini Agents
+    "create_stfc_research_agent",
+    "create_stfc_multi_agent_system",
+    "StfcAgentRunner",
 ]
