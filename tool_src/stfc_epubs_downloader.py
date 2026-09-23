@@ -125,8 +125,11 @@ class StfcEpubsDownloader:
         params: List[Tuple[str, str]] = [
             ("q", query or ""),
             ("sortby", sort_by),
-            ("order", order),
         ]
+
+        has_filters = bool(year or dept or pub_type)
+        if order == "asc" and not has_filters:
+            params.append(("order", order))
 
         if year:
             params.append(("filterYear", str(year)))
