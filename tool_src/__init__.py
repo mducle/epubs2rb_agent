@@ -21,8 +21,17 @@ from .rb_extractor_tool import (
 )
 from .gemini_adk_agent import (
     create_stfc_research_agent,
+    create_stfc_skill_agent,
     create_stfc_multi_agent_system,
     StfcAgentRunner,
+)
+from .skills import (
+    load_stfc_discovery_skill,
+    load_rb_extractor_skill,
+    load_all_stfc_skills,
+    create_stfc_skill_toolset,
+    create_discovery_skill_toolset,
+    create_beamtime_skill_toolset,
 )
 
 __all__ = [
@@ -42,8 +51,16 @@ __all__ = [
     "scan_text_for_rb",
     "get_rb_agent_tools",
     "get_gemini_rb_tool_declarations",
+    # Agent Skills (agentskills.io & Google ADK)
+    "load_stfc_discovery_skill",
+    "load_rb_extractor_skill",
+    "load_all_stfc_skills",
+    "create_stfc_skill_toolset",
+    "create_discovery_skill_toolset",
+    "create_beamtime_skill_toolset",
     # Google ADK Gemini Agents
     "create_stfc_research_agent",
+    "create_stfc_skill_agent",
     "create_stfc_multi_agent_system",
     "StfcAgentRunner",
 ]

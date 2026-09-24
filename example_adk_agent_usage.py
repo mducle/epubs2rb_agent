@@ -18,6 +18,7 @@ import asyncio
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 from google.adk.agents import LlmAgent
+from google.adk.tools.skill_toolset import SkillToolset
 from tool_src import (
     create_stfc_research_agent,
     create_stfc_multi_agent_system,
@@ -38,17 +39,23 @@ def run_tests():
     print("=" * 72)
 
     # ------------------------------------------------------------------------
-    # Test 1: Single Unified LlmAgent in Google ADK
+    # Test 1: Single Unified LlmAgent in Google ADK (Skills & Direct Tools)
     # ------------------------------------------------------------------------
     print("\n[Test 1] Creating unified STFC Gemini agent with Google ADK...")
-    agent = create_stfc_research_agent()
+    # A) Skill-enabled Agent (Default)
+    agent = create_stfc_research_agent(use_skills=True)
     assert isinstance(agent, LlmAgent), "Agent must be an instance of google.adk.agents.LlmAgent"
     assert agent.name == "stfc_research_agent"
     assert agent.model == "gemini-2.5-flash"
-    assert len(agent.tools) == 7, f"Expected 7 tools, found {len(agent.tools)}"
+    assert len(agent.tools) == 1
+    assert isinstance(agent.tools[0], SkillToolset)
+    print(f"  [OK] Skill-Enabled Agent initialized: '{agent.name}' (Model: {agent.model})")
+    print(f"       Equipped with SkillToolset ({len(agent.tools[0].skills)} skills)")
 
-    print(f"  [OK] Agent initialized: '{agent.name}' (Model: {agent.model})")
-    print(f"  [OK] Successfully bound {len(agent.tools)} repository tools:")
+    # B) Legacy Direct Tool Mode (Backward Compatibility)
+    legacy_agent = create_stfc_research_agent(use_skills=False)
+    assert len(legacy_agent.tools) == 7, f"Expected 7 tools, found {len(legacy_agent.tools)}"
+    print(f"  [OK] Legacy Direct-Tool Agent initialized: bound {len(legacy_agent.tools)} repository tools:")
     expected_tools = [
         "search_stfc_publications",
         "download_stfc_dataset",
@@ -58,7 +65,7 @@ def run_tests():
         "extract_rb_from_doi",
         "extract_rb_from_pdf",
     ]
-    tool_names = [getattr(t, "__name__", str(t)) for t in agent.tools]
+    tool_names = [getattr(t, "__name__", str(t)) for t in legacy_agent.tools]
     for exp in expected_tools:
         assert exp in tool_names, f"Missing tool: {exp}"
         print(f"       - {exp}")
@@ -67,7 +74,7 @@ def run_tests():
     # Test 2: Hierarchical Multi-Agent System in Google ADK
     # ------------------------------------------------------------------------
     print("\n[Test 2] Creating hierarchical multi-agent system in Google ADK...")
-    multi_agent = create_stfc_multi_agent_system()
+    multi_agent = create_stfc_multi_agent_system(use_skills=True)
     assert isinstance(multi_agent, LlmAgent)
     assert multi_agent.name == "stfc_lead_coordinator"
     assert len(multi_agent.sub_agents) == 2, f"Expected 2 sub-agents, got {len(multi_agent.sub_agents)}"
@@ -77,7 +84,8 @@ def run_tests():
     assert "rb_beamtime_agent" in sub_names
     print(f"  [OK] Root Coordinator: '{multi_agent.name}'")
     for sa in multi_agent.sub_agents:
-        print(f"       - Sub-Agent: '{sa.name}' ({len(sa.tools)} tools: {[getattr(t, '__name__', str(t)) for t in sa.tools]})")
+        tool_desc = [getattr(t, "__name__", type(t).__name__) for t in sa.tools]
+        print(f"       - Sub-Agent: '{sa.name}' ({len(sa.tools)} tools: {tool_desc})")
 
     # ------------------------------------------------------------------------
     # Test 3: Session Management & StfcAgentRunner

@@ -38,6 +38,12 @@ from tool_src.rb_extractor_tool import (
     extract_rb_from_pdf,
     scan_text_for_rb,
 )
+from tool_src.skills import (
+    create_stfc_skill_toolset,
+    create_discovery_skill_toolset,
+    create_beamtime_skill_toolset,
+    load_all_stfc_skills,
+)
 
 DEFAULT_MODEL = "gemini-2.5-flash"
 
@@ -79,27 +85,34 @@ Identify whether allocations are explicitly confirmed ('supported by beamtime al
 def create_stfc_research_agent(
     model: str = DEFAULT_MODEL,
     instruction: Optional[str] = None,
+    use_skills: bool = True,
 ) -> LlmAgent:
     """
-    Creates a unified Gemini LLM Agent using Google ADK equipped with all
-    repository tools for STFC literature discovery and RB beamtime auditing.
+    Creates a unified Gemini LLM Agent using Google ADK equipped with STFC skills
+    (or legacy direct tools) for STFC literature discovery and RB beamtime auditing.
 
     Args:
         model: Gemini model version (default: 'gemini-2.5-flash').
         instruction: Optional custom system instructions.
+        use_skills: If True (default), equips the agent with Google ADK `SkillToolset`
+                    incorporating `stfc-epubs-discovery` and `rb-experiment-extractor`.
+                    If False, loads direct function tools.
 
     Returns:
         Configured Google ADK LlmAgent instance.
     """
-    tools = [
-        search_stfc_publications,
-        download_stfc_dataset,
-        extract_publication_dois,
-        get_stfc_departments_and_types,
-        extract_rb_experiment_numbers,
-        extract_rb_from_doi,
-        extract_rb_from_pdf,
-    ]
+    if use_skills:
+        tools = [create_stfc_skill_toolset()]
+    else:
+        tools = [
+            search_stfc_publications,
+            download_stfc_dataset,
+            extract_publication_dois,
+            get_stfc_departments_and_types,
+            extract_rb_experiment_numbers,
+            extract_rb_from_doi,
+            extract_rb_from_pdf,
+        ]
 
     return LlmAgent(
         name="stfc_research_agent",
@@ -113,8 +126,17 @@ def create_stfc_research_agent(
     )
 
 
+def create_stfc_skill_agent(
+    model: str = DEFAULT_MODEL,
+    instruction: Optional[str] = None,
+) -> LlmAgent:
+    """Convenience alias to create an STFC research agent driven by Agent Skills."""
+    return create_stfc_research_agent(model=model, instruction=instruction, use_skills=True)
+
+
 def create_stfc_multi_agent_system(
     model: str = DEFAULT_MODEL,
+    use_skills: bool = True,
 ) -> LlmAgent:
     """
     Creates a hierarchical multi-agent system using Google ADK's sub-agent architecture:
@@ -124,22 +146,34 @@ def create_stfc_multi_agent_system(
 
     Args:
         model: Gemini model version (default: 'gemini-2.5-flash').
+        use_skills: If True (default), equips sub-agents with dedicated SkillToolsets.
 
     Returns:
         The root coordinator LlmAgent equipped with the specialized sub-agents.
     """
+    if use_skills:
+        discovery_tools = [create_discovery_skill_toolset()]
+        beamtime_tools = [create_beamtime_skill_toolset()]
+    else:
+        discovery_tools = [
+            search_stfc_publications,
+            download_stfc_dataset,
+            extract_publication_dois,
+            get_stfc_departments_and_types,
+        ]
+        beamtime_tools = [
+            extract_rb_experiment_numbers,
+            extract_rb_from_doi,
+            extract_rb_from_pdf,
+        ]
+
     # 1. Discovery Sub-Agent
     discovery_agent = LlmAgent(
         name="stfc_discovery_agent",
         description="Specialist agent that searches STFC ePubs repository and extracts publication DOIs.",
         model=model,
         instruction=DISCOVERY_AGENT_INSTRUCTION,
-        tools=[
-            search_stfc_publications,
-            download_stfc_dataset,
-            extract_publication_dois,
-            get_stfc_departments_and_types,
-        ],
+        tools=discovery_tools,
     )
 
     # 2. Beamtime Auditor Sub-Agent
@@ -148,11 +182,7 @@ def create_stfc_multi_agent_system(
         description="Specialist auditor that extracts beamtime proposal experiment numbers (RB#######) from DOIs and PDFs.",
         model=model,
         instruction=BEAMTIME_AGENT_INSTRUCTION,
-        tools=[
-            extract_rb_experiment_numbers,
-            extract_rb_from_doi,
-            extract_rb_from_pdf,
-        ],
+        tools=beamtime_tools,
     )
 
     # 3. Root Coordinator Agent
